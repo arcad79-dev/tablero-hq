@@ -1,0 +1,23 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tablero HQ</title>
+<style>body{font-family:system-ui,sans-serif;margin:0;background:#f6f6f4;color:#222}header{padding:16px 20px;background:#fff;border-bottom:1px solid #ddd}h1{margin:0;font-size:20px}#u{font-size:14px;color:#555;margin-top:4px}
+main{padding:16px 20px}.floor{margin-bottom:22px}.floor h2{font-size:15px;color:#666;text-transform:uppercase;letter-spacing:.05em}.grid{display:flex;flex-wrap:wrap;gap:12px}
+.bot{background:#fff;border:1px solid #ddd;border-radius:14px;padding:12px;width:240px;display:flex;gap:10px}.av{width:38px;height:38px;flex:none;border-radius:50%}
+.n{font-weight:600;font-size:14px}.n a{color:inherit;text-decoration:none}.s{display:inline-block;font-size:12px;padding:2px 8px;border-radius:9px;margin:4px 0;background:#eee}
+.working{background:#dbeafe}.done,.idle{background:#dcfce7}.waiting_user{background:#fef3c7}.error{background:#fee2e2}.st{font-size:12px;color:#555}.r{font-size:11px;color:#888;margin-top:4px}</style></head>
+<body><header><h1>Tablero HQ</h1><div id="u">Cargando…</div></header><main id="m"></main>
+<script>
+const T=location.hash.slice(1);const S={roster:[],groups:{},chat:{},looks:{},bots:{},routines:{},usage:null};
+const R={sphere:"50%",cloud:"40% 60% 50% 50%",rounded_square:"10px",bubble:"50% 50% 50% 10%",drop:"50% 50% 50% 0",pill:"20px"};
+function ap(o){if(!o||typeof o!=="object")return;for(const k of["groups","chat","looks"])if(o[k])Object.assign(S[k],o[k]);
+if(o.roster)S.roster=o.roster;if(o.bot&&o.status)S.bots[o.bot]=o;if(o.routines&&o.routines.bot)S.routines[o.routines.bot]=o.routines.items;if(o.type==="usage")S.usage=o;}
+function d(){const u=S.usage;document.getElementById("u").textContent=u?`Uso semanal: ${u.total_used_pct}% · reinicio ${new Date(u.resets_at).toLocaleString("es-CO")}`:"Sin datos de uso aún";
+const fl={};for(const b of S.roster){const g=S.groups[b]||"Ops";(fl[g]=fl[g]||[]).push(b)}let h="";
+for(const g of Object.keys(fl).sort()){h+=`<section class="floor"><h2>${g}</h2><div class="grid">`;for(const b of fl[g]){const l=S.looks[b]||{},s=S.bots[b]||{},pc=u&&u.bots?u.bots[b]:null,rt=S.routines[b]||[];
+const e=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+h+=`<div class="bot"><div class="av" style="background:${e(l.color||"#959595")};border-radius:${R[l.shape]||"30%"}"></div><div><div class="n">${S.chat[b]?`<a href="${e(S.chat[b])}">${e(b)}</a>`:e(b)}</div>
+<span class="s ${e(s.status||"")}">${e(s.status||"sin reporte")}</span><div class="st">${e(s.step||"")}</div>${pc?`<div class="r">Uso: ${pc}%</div>`:""}${rt.map(r=>`<div class="r">⏰ ${e(r.name)} · ${e(r.schedule)}</div>`).join("")}</div></div>`}h+="</div></section>"}
+document.getElementById("m").innerHTML=h||"<p>Esperando datos del canal…</p>";}
+if(!T){document.getElementById("u").textContent="Falta el canal al final de la dirección (#…)";}else{
+fetch(`https://ntfy.sh/${T}/json?poll=1&since=12h`).then(r=>r.text()).then(t=>{t.split("\n").forEach(l=>{try{const m=JSON.parse(l);if(m.event==="message")ap(JSON.parse(m.message))}catch(e){}});d();
+const es=new EventSource(`https://ntfy.sh/${T}/sse`);es.onmessage=ev=>{try{const m=JSON.parse(ev.data);ap(JSON.parse(m.message));d()}catch(e){}}}).catch(()=>{document.getElementById("u").textContent="No pude leer el canal"})}
+</script></body></html>
